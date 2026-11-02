@@ -1,0 +1,103 @@
+project:
+  name: "IIIT Sri City - Machine Learning Assignment"
+  seed: 42
+  environment: "production"
+
+data_paths:
+  classification:
+    raw: "data/raw/classification/pricerunner_aggregate.csv"
+    interim: "data/interim/classification/cleaned_data.csv"
+    processed: "data/processed/classification/"
+  regression:
+    raw: "data/raw/regression/Metro_Interstate_Traffic_Volume.csv"
+    interim: "data/interim/regression/cleaned_data.csv"
+    processed: "data/processed/regression/"
+  clustering:
+    raw_dir: "data/raw/clustering/"
+    raw_files:
+      - "data/raw/clustering/gt_2011.csv"
+      - "data/raw/clustering/gt_2012.csv"
+      - "data/raw/clustering/gt_2013.csv"
+      - "data/raw/clustering/gt_2014.csv"
+      - "data/raw/clustering/gt_2015.csv"
+    interim: "data/interim/clustering/combined_gt.csv"
+    processed: "data/processed/clustering/"
+
+outputs:
+  classification:
+    metrics: "outputs/classification/metrics/"
+    plots: "outputs/classification/plots/"
+    models: "outputs/classification/models/"
+  regression:
+    metrics: "outputs/regression/metrics/"
+    plots: "outputs/regression/plots/"
+    models: "outputs/regression/models/"
+  clustering:
+    metrics: "outputs/clustering/metrics/"
+    plots: "outputs/clustering/plots/"
+  reports:
+    figures: "reports/figures/"
+    results: "reports/results/"
+
+classification:
+  text_col: "Product Title"
+  target_col: "Category Label"
+  test_size: 0.20
+  stratified: true
+  tfidf:
+    max_features: 5000
+    min_df: 2
+    ngram_range: [1, 2]
+    sublinear_tf: true
+  knn:
+    n_neighbors_grid: [3, 5, 7, 11, 15]
+    metrics: ["cosine", "euclidean"]
+    weights: ["uniform", "distance"]
+    cv_folds: 5
+    algorithm: "brute"
+  decision_tree:
+    max_depth_grid: [10, 20, 30, null]
+    min_samples_split_grid: [2, 5, 10]
+    min_samples_leaf_grid: [1, 2, 4]
+    criteria: ["gini", "entropy"]
+    cv_folds: 5
+  svm:
+    c_grid: [0.1, 1.0, 10.0]
+    gamma_grid: ["scale", 0.01]
+    kernel: "rbf"
+    probability: true
+    cv_folds: 3
+    benchmark_subsample: 10000
+
+regression:
+  target_col: "traffic_volume"
+  test_size: 0.20
+  split_strategy: "chronological"
+  cv_splits: 5
+  continuous_features: ["temp", "rain_1h", "snow_1h", "clouds_all"]
+  categorical_features: ["holiday", "weather_main"]
+  gradient_descent:
+    learning_rate: 0.05
+    max_iters: 1000
+    tolerance: 1e-6
+  polynomial:
+    degrees: [1, 2, 3, 4, 5]
+  ridge:
+    alphas: [0.001, 0.01, 0.1, 1.0, 10.0, 100.0, 1000.0]
+  lasso:
+    alphas: [0.0001, 0.001, 0.01, 0.1, 1.0, 10.0]
+
+clustering:
+  features: ["AT", "AP", "AH", "AFDP", "GTEP", "TIT", "TAT", "TEY", "CDP", "CO", "NOX"]
+  k_values: [2, 3, 4, 5, 6]
+  kmeans:
+    n_init: 10
+    max_iter: 300
+    tol: 1e-4
+  pca:
+    components: [2, 3]
+
+plotting:
+  style: "seaborn-v0_8-whitegrid"
+  dpi: 300
+  format: "png"
