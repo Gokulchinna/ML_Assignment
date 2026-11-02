@@ -206,4 +206,4 @@ python experiments/run_clustering.py
 ## 6. Academic PDF Report
 
 The comprehensive 15-page academic report is compiled and available at:
-- **Report Path:** [`reports/ML_Assignment_Report.pdf`](reports/ML_Assignment.pdf)
+- **Report Path:** [`reports/ML_Assignment_Report.pdf`](reports/ML_Assignment_Report.pdf)
