@@ -1,7 +1,7 @@
 # IIIT Sri City — Machine Learning Assignment (M2026)
 
 **Course:** Machine Learning (M2026)  
-**Submission Deliverable:** [`reports/ML_Assignment_Report_Fresh_Rebuilt.pdf`](reports/ML_Assignment_Report_Fresh_Rebuilt.pdf)  
+**Submission Deliverable:** [`reports/ML_Assignment_Report.pdf`](reports/ML_Assignment_Report.pdf)  
 
 ---
 
