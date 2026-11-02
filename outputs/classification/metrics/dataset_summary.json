@@ -1,0 +1,20 @@
+{
+  "dataset_name": "EuroSAT_RGB",
+  "total_images": 27000,
+  "classes": {
+    "AnnualCrop": 3000,
+    "Forest": 3000,
+    "HerbaceousVegetation": 3000,
+    "Highway": 2500,
+    "Industrial": 2500,
+    "Pasture": 2000,
+    "PermanentCrop": 2500,
+    "Residential": 3000,
+    "River": 2500,
+    "SeaLake": 3000
+  },
+  "train_samples": 21600,
+  "test_samples": 5400,
+  "resolution": "64x64x3 RGB",
+  "random_seed": 42
+}

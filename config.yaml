@@ -5,8 +5,8 @@ project:
 
 data_paths:
   classification:
-    raw: "data/raw/classification/pricerunner_aggregate.csv"
-    interim: "data/interim/classification/cleaned_data.csv"
+    raw: "data/raw/classification/EuroSAT_RGB/"
+    interim: "data/interim/classification/"
     processed: "data/processed/classification/"
   regression:
     raw: "data/raw/regression/Metro_Interstate_Traffic_Volume.csv"
@@ -40,34 +40,42 @@ outputs:
     results: "reports/results/"
 
 classification:
-  text_col: "Product Title"
-  target_col: "Category Label"
+  dataset_name: "EuroSAT_RGB"
+  image_size: [64, 64]
+  num_classes: 10
   test_size: 0.20
+  val_size: 0.10
   stratified: true
-  tfidf:
-    max_features: 5000
-    min_df: 2
-    ngram_range: [1, 2]
-    sublinear_tf: true
+  hog:
+    orientations: 9
+    pixels_per_cell: [8, 8]
+    cells_per_block: [2, 2]
+    channel_axis: -1
   knn:
-    n_neighbors_grid: [3, 5, 7, 11, 15]
-    metrics: ["cosine", "euclidean"]
+    n_neighbors_grid: [3, 5, 7, 9, 11, 15]
     weights: ["uniform", "distance"]
     cv_folds: 5
-    algorithm: "brute"
+    algorithm: "auto"
   decision_tree:
-    max_depth_grid: [10, 20, 30, null]
+    max_depth_grid: [10, 15, 20, 25, null]
     min_samples_split_grid: [2, 5, 10]
     min_samples_leaf_grid: [1, 2, 4]
     criteria: ["gini", "entropy"]
     cv_folds: 5
   svm:
     c_grid: [0.1, 1.0, 10.0]
-    gamma_grid: ["scale", 0.01]
+    gamma_grid: ["scale", "auto"]
     kernel: "rbf"
     probability: true
     cv_folds: 3
-    benchmark_subsample: 10000
+    benchmark_subsample: 5000
+  cnn:
+    architecture: "resnet18_adapted"
+    batch_size: 64
+    num_epochs: 20
+    learning_rate: 0.001
+    weight_decay: 0.0001
+    early_stopping_patience: 5
 
 regression:
   target_col: "traffic_volume"

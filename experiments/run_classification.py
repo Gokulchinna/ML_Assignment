@@ -1,177 +1,278 @@
 """
-Experiment driver for Stage 3: Part 1 (Classification Analysis)
-Executes K-Nearest Neighbours (with CV), Decision Tree (with depth tuning),
-and Support Vector Machine (with RBF Kernel).
-Generates confusion matrices, multiclass ROC curves, metrics comparison tables,
-and identifies the best classifier based on ROC curve analysis.
+Master Execution Script for Part 1: Land-Cover Classification on EuroSAT RGB Imagery.
+Executes all stages end-to-end adhering strictly to the IIIT Sri City ML rubric:
+1. Stage 1: Dataset Exploration and Stratified 80/20 Partitioning (Zero Data Leakage).
+2. Stage 2: Histogram of Oriented Gradients (HOG) Feature Extraction.
+3. Stage 3: K-Nearest Neighbour Classifier with 5-Fold Stratified Cross-Validation.
+4. Stage 4: Decision Tree Classifier with Complexity Controls & Overfitting Analysis.
+5. Stage 5: Support Vector Machine with RBF Kernel, Margin Analysis & Calibrated Probabilities.
+6. Stage 6: Deep Convolutional Neural Network (Adapted ResNet-18) Trained on RGB Spatial Tensors.
+7. Stage 7: Unified Multi-Class Evaluation (Accuracy, Precision, Recall, F1, ROC-AUC, Confusion Matrices, Comparative ROC Curves).
 """
 
 import os
 import sys
+import json
 import time
+import argparse
 import yaml
 import numpy as np
 import pandas as pd
+import torch
 
-# Add project root to sys.path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-# Reconfigure stdout to utf-8 if supported
+# Unbuffer stdout so progress logs flush immediately
 if hasattr(sys.stdout, "reconfigure"):
-    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stdout.reconfigure(line_buffering=True)
 
-from src.common.reproducibility import set_seed
-from src.classification.prepare_data import prepare_classification_data
+# Ensure repository root is on sys.path
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
+from src.classification.prepare_data import prepare_eurosat_split, get_eurosat_dataloaders
+from src.classification.extract_features import get_or_extract_hog_features
 from src.classification.train_knn import train_knn_classifier
 from src.classification.train_decision_tree import train_decision_tree_classifier
 from src.classification.train_svm import train_svm_classifier
-from src.classification.evaluate import evaluate_all_classifiers, plot_combined_model_roc_curves
+from src.classification.train_resnet import train_resnet18_classifier
+from src.classification.evaluate import evaluate_all_classifiers
 
 
-def main():
-    print("=" * 70)
-    print("STAGE 3: PART 1 -- MULTICLASS CLASSIFICATION EXPERIMENTS")
-    print("=" * 70)
+def run_full_classification_pipeline(max_stage: int = 7):
+    total_pipeline_start = time.time()
+    print("=" * 80)
+    print("  IIIT SRI CITY - MACHINE LEARNING ASSIGNMENT")
+    print("  PART 1: COMPREHENSIVE IMAGE CLASSIFICATION BENCHMARK ON EUROSAT RGB")
+    print("  MODELS: KNN (w/ CV) | DECISION TREE | SVM (RBF KERNEL) | DEEP CNN (RESNET-18)")
+    print("=" * 80)
     
-    # 1. Load Configuration
-    config_path = "config.yaml"
-    with open(config_path, "r", encoding="utf-8") as f:
+    # 0. Load Configuration
+    config_path = os.path.join(PROJECT_ROOT, "config.yaml")
+    with open(config_path, "r") as f:
         config = yaml.safe_load(f)
         
-    seed = config["project"]["seed"]
-    set_seed(seed)
-    print(f"[Config] Global deterministic seed set to: {seed}")
+    seed = config["project"].get("seed", 42)
+    torch.manual_seed(seed)
+    np.random.seed(seed)
     
-    raw_file = config["data_paths"]["classification"]["raw"]
-    test_size = config["classification"]["test_size"]
-    tfidf_cfg = config["classification"]["tfidf"]
-    knn_cfg = config["classification"]["knn"]
-    dt_cfg = config["classification"]["decision_tree"]
-    svm_cfg = config["classification"]["svm"]
+    data_dir = os.path.join(PROJECT_ROOT, config["data_paths"]["classification"]["raw"])
+    interim_dir = os.path.join(PROJECT_ROOT, config["data_paths"]["classification"]["interim"])
+    plot_dir = os.path.join(PROJECT_ROOT, config["outputs"]["classification"]["plots"])
+    metric_dir = os.path.join(PROJECT_ROOT, config["outputs"]["classification"]["metrics"])
+    model_dir = os.path.join(PROJECT_ROOT, config["outputs"]["classification"]["models"])
+    reports_fig_dir = os.path.join(PROJECT_ROOT, config["outputs"]["reports"]["figures"])
+    reports_res_dir = os.path.join(PROJECT_ROOT, config["outputs"]["reports"]["results"])
     
-    # Ensure output directories exist
-    os.makedirs("outputs/classification/metrics", exist_ok=True)
-    os.makedirs("outputs/classification/plots", exist_ok=True)
-    os.makedirs("reports/results", exist_ok=True)
-    os.makedirs("reports/figures", exist_ok=True)
+    split_file = os.path.join(interim_dir, "eurosat_split.json")
+    hog_cache_file = os.path.join(interim_dir, "eurosat_hog_features.npz")
     
-    # 2. Data Preparation & 80/20 Stratified Split
-    print(f"\n[1/4] Loading and Stratifying PriceRunner Dataset ({raw_file})...")
-    X_train, y_train, X_test, y_test, class_names, vectorizer, meta = prepare_classification_data(
-        raw_file,
-        test_size=test_size,
-        max_features=tfidf_cfg["max_features"],
-        random_state=seed
-    )
-    print(f"  * Total samples: {meta['total_samples']:,} across {meta['num_classes']} balanced classes")
-    print(f"  * Stratified Train samples (80%): {meta['train_samples']:,}")
-    print(f"  * Stratified Test samples  (20%): {meta['test_samples']:,}")
-    print(f"  * TF-IDF vocabulary size (fitted strictly on train): {meta['vocabulary_size']:,} n-grams")
-    
-    models_dict = {}
-    runtimes = {}
-    
-    # 3. Model 1: KNN with Cross-Validation
-    print(f"\n[2/4] Training K-Nearest Neighbours with 5-Fold Stratified CV...")
-    t0 = time.time()
-    knn_model, knn_res = train_knn_classifier(
-        X_train, y_train, X_test,
-        n_neighbors_grid=knn_cfg["n_neighbors_grid"],
-        weights_grid=knn_cfg["weights"],
-        cv_folds=knn_cfg["cv_folds"],
-        random_state=seed
-    )
-    runtimes["KNN"] = time.time() - t0
-    print(f"  * KNN Best Hyperparameters: {knn_res['best_params']} (CV Accuracy: {knn_res['best_cv_score']:.4f})")
-    print(f"  * KNN Workflow Runtime: {runtimes['KNN']:.2f}s")
-    models_dict["KNN (with CV)"] = knn_res
-    
-    # 4. Model 2: Decision Tree with Complexity Tuning
-    print(f"\n[3/4] Training Decision Tree with 5-Fold Stratified CV...")
-    t0 = time.time()
-    dt_model, dt_res = train_decision_tree_classifier(
-        X_train, y_train, X_test,
-        max_depth_grid=dt_cfg["max_depth_grid"],
-        min_samples_split_grid=dt_cfg["min_samples_split_grid"],
-        criteria_grid=dt_cfg["criteria"],
-        cv_folds=dt_cfg["cv_folds"],
-        random_state=seed
-    )
-    runtimes["Decision Tree"] = time.time() - t0
-    print(f"  * Decision Tree Best Hyperparameters: {dt_res['best_params']} (CV Accuracy: {dt_res['best_cv_score']:.4f})")
-    print(f"  * Fitted Tree Depth: {dt_res['tree_depth']} levels, {dt_res['n_leaves']} leaves")
-    print(f"  * Decision Tree Workflow Runtime: {runtimes['Decision Tree']:.2f}s")
-    models_dict["Decision Tree"] = dt_res
-    
-    # 5. Model 3: Support Vector Machine with RBF Kernel
-    print(f"\n[4/4] Training Support Vector Machine with RBF Kernel (with CV)...")
-    t0 = time.time()
-    svm_model, svm_res = train_svm_classifier(
-        X_train, y_train, X_test,
-        c_grid=svm_cfg["c_grid"],
-        gamma_grid=svm_cfg["gamma_grid"],
-        cv_folds=svm_cfg["cv_folds"],
-        benchmark_subsample=svm_cfg["benchmark_subsample"],
-        random_state=seed
-    )
-    runtimes["SVM (RBF)"] = time.time() - t0
-    print(f"  * RBF SVM Best Hyperparameters: {svm_res['best_params']} (CV Accuracy: {svm_res['best_cv_score']:.4f})")
-    print(f"  * RBF SVM Workflow Runtime: {runtimes['SVM (RBF)']:.2f}s")
-    models_dict["SVM (RBF Kernel)"] = svm_res
-    
-    # 6. Comprehensive Metrics Compilation & Confusion Matrices
-    print("\n" + "=" * 70)
-    print("EVALUATING CLASSIFIERS ON HELD-OUT TEST SET (80/20 STRATIFIED)")
-    print("=" * 70)
-    summary_df, full_metrics = evaluate_all_classifiers(models_dict, y_test, class_names)
-    
-    # Add runtime column
-    summary_df["Training_Runtime_s"] = [
-        f"{runtimes['KNN']:.2f}",
-        f"{runtimes['Decision Tree']:.2f}",
-        f"{runtimes['SVM (RBF)']:.2f}"
-    ]
-    
-    print("\n--- CLASSIFICATION METRICS COMPARISON TABLE ---")
-    print(summary_df.to_string(index=False))
-    
-    # Save metrics table
-    metrics_csv1 = "outputs/classification/metrics/classification_comparison.csv"
-    metrics_csv2 = "reports/results/classification_comparison.csv"
-    summary_df.to_csv(metrics_csv1, index=False)
-    summary_df.to_csv(metrics_csv2, index=False)
-    print(f"\n  * Saved classification comparison table to: {metrics_csv1} and {metrics_csv2}")
-    
-    # Plot Comparative ROC Curves
-    roc_plot1 = "outputs/classification/plots/roc_curves_comparison.png"
-    roc_plot2 = "reports/figures/roc_curves_comparison.png"
-    macro_aucs = plot_combined_model_roc_curves(
-        models_dict, y_test, class_names, roc_plot1, roc_plot2
-    )
-    print(f"  * Saved comparative ROC curves to: {roc_plot1}")
-    
-    # 7. Identify Best Classifier based on ROC Curve Analysis
-    best_classifier = max(macro_aucs, key=macro_aucs.get)
-    best_auc = macro_aucs[best_classifier]
-    print("\n" + "=" * 70)
-    print("BEST CLASSIFIER IDENTIFICATION (ROC CURVE ANALYSIS)")
-    print("=" * 70)
-    print(f"  >>> Best Classifier: {best_classifier} with Macro ROC-AUC = {best_auc:.4f}")
-    for name, auc_val in macro_aucs.items():
-        print(f"      - {name}: Macro ROC-AUC = {auc_val:.4f}")
+    # -------------------------------------------------------------
+    # STAGE 1: Dataset Exploration & Stratified 80/20 Partitioning
+    # -------------------------------------------------------------
+    if os.path.exists(split_file):
+        print(f"\n[Stage 1] Loading verified EuroSAT split from: {split_file}")
+        with open(split_file, "r") as f:
+            split_meta = json.load(f)
+    else:
+        print("\n[Stage 1] Generating EuroSAT exploration figures and stratified 80/20 split...")
+        split_meta = prepare_eurosat_split(
+            data_dir=data_dir,
+            interim_dir=interim_dir,
+            plot_dir=plot_dir,
+            metric_dir=metric_dir,
+            test_size=config["classification"].get("test_size", 0.20),
+            val_size=config["classification"].get("val_size", 0.10),
+            random_state=seed
+        )
         
-    # Invariant checks
-    assert len(y_train) == 28248
-    assert len(y_test) == 7063
-    assert len(class_names) == 10
-    assert np.all(np.isfinite(summary_df["Accuracy"]))
-    assert np.all(np.isfinite(summary_df["ROC_AUC_Macro"]))
-    print("\n[PASS] All classification invariants and metric checks verified successfully.")
+    class_names = split_meta["class_names"]
+    print(f"  EuroSAT Land-Cover Classes ({len(class_names)}): {class_names}")
+    print(f"  Partition counts: Train/Val={split_meta['counts']['train_val_total']}, Test={split_meta['counts']['test_total']}")
     
-    print("\n" + "=" * 70)
-    print("STAGE 3 COMPLETED SUCCESSFULLY: ALL METRICS & FIGURES EXPORTED")
-    print("=" * 70)
+    # -------------------------------------------------------------
+    # STAGE 2: HOG Feature Extraction for Traditional ML
+    # -------------------------------------------------------------
+    print("\n[Stage 2] Loading HOG spatial gradient feature representations...")
+    X_train, y_train, X_test, y_test, class_names = get_or_extract_hog_features(
+        split_meta=split_meta,
+        cache_path=hog_cache_file,
+        orientations=config["classification"]["hog"].get("orientations", 9),
+        pixels_per_cell=tuple(config["classification"]["hog"].get("pixels_per_cell", [8, 8])),
+        cells_per_block=tuple(config["classification"]["hog"].get("cells_per_block", [2, 2]))
+    )
+    print(f"  X_train shape: {X_train.shape} (HOG feature dimensionality: {X_train.shape[1]})")
+    print(f"  X_test shape:  {X_test.shape}")
+    
+    results = {}
+    
+    # -------------------------------------------------------------
+    # STAGE 3: K-Nearest Neighbours with 5-Fold Stratified CV
+    # -------------------------------------------------------------
+    knn_cfg = config["classification"]["knn"]
+    knn_model, knn_res = train_knn_classifier(
+        X_train=X_train,
+        y_train=y_train,
+        X_test=X_test,
+        y_test=y_test,
+        k_grid=knn_cfg.get("n_neighbors_grid", [3, 5, 7, 9, 11, 15]),
+        weights_grid=knn_cfg.get("weights", ["uniform", "distance"]),
+        cv_folds=knn_cfg.get("cv_folds", 5),
+        tuning_subsample=5000,
+        random_state=seed
+    )
+    results["knn"] = knn_res
+    
+    # -------------------------------------------------------------
+    # STAGE 4: Decision Tree with Complexity Controls
+    # -------------------------------------------------------------
+    dt_cfg = config["classification"]["decision_tree"]
+    dt_plot_path = os.path.join(plot_dir, "decision_tree_structure.png")
+    dt_model, dt_res = train_decision_tree_classifier(
+        X_train=X_train,
+        y_train=y_train,
+        X_test=X_test,
+        y_test=y_test,
+        class_names=class_names,
+        max_depth_grid=dt_cfg.get("max_depth_grid", [10, 15, 20, 25, None]),
+        min_samples_split_grid=dt_cfg.get("min_samples_split_grid", [2, 5, 10]),
+        criteria_grid=dt_cfg.get("criteria", ["gini", "entropy"]),
+        cv_folds=dt_cfg.get("cv_folds", 5),
+        tuning_subsample=5000,
+        tree_plot_path=dt_plot_path,
+        random_state=seed
+    )
+    results["decision_tree"] = dt_res
+    
+    # -------------------------------------------------------------
+    # STAGE 5: SVM with RBF Kernel
+    # -------------------------------------------------------------
+    svm_cfg = config["classification"]["svm"]
+    svm_model, svm_res = train_svm_classifier(
+        X_train=X_train,
+        y_train=y_train,
+        X_test=X_test,
+        y_test=y_test,
+        c_grid=svm_cfg.get("c_grid", [0.1, 1.0, 10.0]),
+        gamma_grid=svm_cfg.get("gamma_grid", ["scale", "auto"]),
+        cv_folds=svm_cfg.get("cv_folds", 3),
+        tuning_subsample=svm_cfg.get("benchmark_subsample", 5000),
+        random_state=seed
+    )
+    results["svm"] = svm_res
+    
+    # Check if user requested to stop at Stage 5
+    if max_stage <= 5:
+        print("\n" + "=" * 80)
+        print("  STAGE 1 TO 5 COMPLETED SUCCESSFULLY (STOPPING AS REQUESTED)")
+        print("=" * 80)
+        
+        # Save intermediate traditional ML results
+        stage_5_results_file = os.path.join(metric_dir, "traditional_ml_stage1_to_5.npz")
+        np.savez_compressed(
+            stage_5_results_file,
+            knn_pred=knn_res["y_pred"],
+            knn_prob=knn_res["y_prob"],
+            dt_pred=dt_res["y_pred"],
+            dt_prob=dt_res["y_prob"],
+            svm_pred=svm_res["y_pred"],
+            svm_prob=svm_res["y_prob"],
+            y_test=y_test
+        )
+        
+        summary_rows = [
+            {
+                "Model": "KNN (with CV)",
+                "Best Params": f"K={knn_res['best_k']}, weights='{knn_res['best_weights']}'",
+                "CV Accuracy": round(knn_res["best_cv_score"], 4),
+                "Train Accuracy": round(knn_res["train_accuracy"], 4),
+                "Test Accuracy": round(knn_res["test_accuracy"], 4),
+                "Gen Gap (%)": round((knn_res["train_accuracy"] - knn_res["test_accuracy"])*100, 2),
+                "Train Time (s)": round(knn_res["training_time_s"], 2),
+                "Pred Time (s)": round(knn_res["prediction_time_s"], 2)
+            },
+            {
+                "Model": "Decision Tree",
+                "Best Params": f"depth={dt_res['best_params']['max_depth']}, crit='{dt_res['best_params']['criterion']}'",
+                "CV Accuracy": round(dt_res["best_cv_score"], 4),
+                "Train Accuracy": round(dt_res["train_accuracy"], 4),
+                "Test Accuracy": round(dt_res["test_accuracy"], 4),
+                "Gen Gap (%)": round((dt_res["train_accuracy"] - dt_res["test_accuracy"])*100, 2),
+                "Train Time (s)": round(dt_res["training_time_s"], 2),
+                "Pred Time (s)": round(dt_res["prediction_time_s"], 2)
+            },
+            {
+                "Model": "SVM (RBF Kernel)",
+                "Best Params": f"C={svm_res['best_c']}, gamma='{svm_res['best_gamma']}'",
+                "CV Accuracy": round(svm_res["best_cv_score"], 4),
+                "Train Accuracy": round(svm_res["train_accuracy"], 4),
+                "Test Accuracy": round(svm_res["test_accuracy"], 4),
+                "Gen Gap (%)": round((svm_res["train_accuracy"] - svm_res["test_accuracy"])*100, 2),
+                "Train Time (s)": round(svm_res["training_time_s"], 2),
+                "Pred Time (s)": round(svm_res["prediction_time_s"], 2)
+            }
+        ]
+        summary_df = pd.DataFrame(summary_rows)
+        print("\n--- [Intermediate Traditional ML Performance Summary (Stages 1-5)] ---")
+        print(summary_df.to_string(index=False))
+        
+        summary_csv = os.path.join(metric_dir, "traditional_ml_stage1_to_5.csv")
+        summary_df.to_csv(summary_csv, index=False)
+        print(f"\nSaved Stage 1-5 summary metrics to: {summary_csv}")
+        print(f"Saved predictions and probabilities to: {stage_5_results_file}")
+        
+        duration = time.time() - total_pipeline_start
+        print(f"\nExecution finished up to Stage 5 in {duration:.1f}s ({duration/60:.2f} min).")
+        return
+        
+    # -------------------------------------------------------------
+    # STAGE 6: Deep CNN (ResNet-18) Trained on Spatial RGB Tensors
+    # -------------------------------------------------------------
+    cnn_cfg = config["classification"]["cnn"]
+    train_loader, val_loader, test_loader = get_eurosat_dataloaders(
+        split_meta=split_meta,
+        batch_size=cnn_cfg.get("batch_size", 64),
+        num_workers=0
+    )
+    
+    ckpt_path = os.path.join(model_dir, "best_resnet18.pth")
+    curves_path = os.path.join(plot_dir, "resnet18_learning_curves.png")
+    
+    resnet_model, resnet_res = train_resnet18_classifier(
+        train_loader=train_loader,
+        val_loader=val_loader,
+        test_loader=test_loader,
+        num_classes=len(class_names),
+        epochs=cnn_cfg.get("num_epochs", 15),
+        lr=cnn_cfg.get("learning_rate", 0.001),
+        weight_decay=cnn_cfg.get("weight_decay", 1e-4),
+        patience=cnn_cfg.get("early_stopping_patience", 4),
+        checkpoint_path=ckpt_path,
+        curve_plot_path=curves_path
+    )
+    results["resnet18"] = resnet_res
+    
+    # -------------------------------------------------------------
+    # STAGE 7: Unified Multi-Class Evaluation & ROC Analysis
+    # -------------------------------------------------------------
+    comparison_df, best_classifier = evaluate_all_classifiers(
+        results_dict=results,
+        y_test=y_test,
+        class_names=class_names,
+        plot_dir=plot_dir,
+        metric_dir=metric_dir,
+        reports_figure_dir=reports_fig_dir,
+        reports_results_dir=reports_res_dir
+    )
+    
+    total_pipeline_duration = time.time() - total_pipeline_start
+    print("\n" + "=" * 80)
+    print(f"  CLASSIFICATION PIPELINE COMPLETED SUCCESSFULLY IN {total_pipeline_duration:.1f}s ({total_pipeline_duration/60:.2f} min)")
+    print(f"  WINNING CLASSIFIER: {best_classifier}")
+    print("=" * 80)
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="EuroSAT Classification Benchmark Runner")
+    parser.add_argument("--max-stage", type=int, default=7, help="Maximum stage to execute (e.g. 5 to stop after SVM)")
+    args = parser.parse_args()
+    run_full_classification_pipeline(max_stage=args.max_stage)

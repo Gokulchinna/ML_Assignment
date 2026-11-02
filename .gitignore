@@ -48,5 +48,8 @@ outputs/**/*.pth
 .system_generated/
 *.log
 
+# Large Raw Image Datasets
+data/raw/classification/
+
 # Keep empty folder structure with .gitkeep if needed
 !.gitkeep

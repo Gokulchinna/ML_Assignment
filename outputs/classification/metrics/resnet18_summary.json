@@ -1,0 +1,11 @@
+{
+  "model_name": "Deep CNN (ResNet-18)",
+  "test_accuracy": 0.943,
+  "test_loss": 0.1583,
+  "train_accuracy": 0.9447,
+  "val_accuracy": 0.943,
+  "generalization_gap_pct": 0.17,
+  "training_time_s": 339.43,
+  "prediction_time_s": 8.83,
+  "epochs_trained": 6
+}
