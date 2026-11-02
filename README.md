@@ -7,9 +7,9 @@
 
 ## 1. Assignment Overview & Scope
 
-This repository contains the complete, rigorous implementation of the IIIT Sri City Machine Learning Assignment across all three core modules, including the Deep Learning bonus model (+5 marks):
+This repository contains the complete, rigorous implementation of the IIIT Sri City Machine Learning Assignment across all three core modules, including the Deep Learning bonus model:
 
-1. **Part 1: Multiclass Classification (10 Marks + 5 Marks Bonus)**
+1. **Part 1: Multiclass Classification**
    - **Dataset:** EuroSAT RGB Land Cover Dataset (27,000 Sentinel-2 satellite images, $64 \times 64 \times 3$, 10 land cover classes).
    - **Protocol:** Strict stratified 80/20 train/test partition ($21{,}600$ train, $5{,}400$ unseen test images) with zero data leakage. Spatial features represented using $1{,}764$-D Histogram of Oriented Gradients (HOG).
    - **Algorithms Evaluated:**
@@ -19,7 +19,7 @@ This repository contains the complete, rigorous implementation of the IIIT Sri C
      4. *Deep Convolutional Neural Network (ResNet-18, +5 Marks Bonus):* Custom-adapted for $64 \times 64$ images (stride-1 $3 \times 3$ conv, identity pooling, 4 residual stages, $11.17\text{M}$ parameters) trained with AdamW and cosine annealing on NVIDIA RTX 3060 GPU hardware acceleration.
    - **Unified Evaluation:** Multi-class Accuracy, Precision, Recall, Macro F1, Weighted F1, Macro ROC-AUC, 4-panel normalized confusion matrices, comparative One-vs-Rest ROC curve analysis, and Vapnik-Chervonenkis (VC) generalization gap analysis.
 
-2. **Part 2: Regularized Regression & Polynomial Complexity (10 Marks)**
+2. **Part 2: Regularized Regression & Polynomial Complexity**
    - **Dataset:** Metro Interstate Traffic Volume (UCI 492, 48,204 hourly records) predicting continuous `traffic_volume`.
    - **Algorithms Evaluated:**
      1. *Linear Regression from Scratch:* Batch Gradient Descent ($\eta=0.05$, 1,000 iterations) with normalized gradients verifying numerical convergence against closed-form Ordinary Least Squares (relative deviation $<0.1\%$).
@@ -27,7 +27,7 @@ This repository contains the complete, rigorous implementation of the IIIT Sri C
      3. *Ridge (L2) & Lasso (L1) Regularization:* Time-series cross-validation over regularization penalty paths ($\alpha \in [10^{-3}, 10^3]$), showing 56.5% feature sparsity with Lasso.
      4. *Outlier Sensitivity:* Robust evaluation of rainfall anomaly ($9{,}831.3\text{ mm}$) impact on parameter stability and sign fidelity.
 
-3. **Part 3: Unsupervised Learning from Scratch (10 Marks)**
+3. **Part 3: Unsupervised Learning from Scratch**
    - **Dataset:** Gas Turbine CO and NOx Telemetry (UCI 551, 36,733 records with 11 continuous sensor measurements).
    - **Part 3A — K-Means Clustering from Scratch (5 Marks):**
      - Pure NumPy implementation of Lloyd's algorithm with Euclidean distance minimization and random restarts.
@@ -97,7 +97,7 @@ ML_Assignment/
     ├── figures/                               # High-resolution figures embedded in the academic report
     ├── results/                               # Exported CSV metric tables matching experimental runs
     ├── build_fresh_report.py                  # Script to compile the PDF report
-    └── ML_Assignment_Report_Fresh_Rebuilt.pdf # Final academic submission report (15 pages)
+    └── ML_Assignment_Report.pdf # Final academic submission report (15 pages)
 ```
 
 ---
@@ -206,9 +206,4 @@ python experiments/run_clustering.py
 ## 6. Academic PDF Report
 
 The comprehensive 15-page academic report is compiled and available at:
-- **Report Path:** [`reports/ML_Assignment_Report_Fresh_Rebuilt.pdf`](reports/ML_Assignment_Report_Fresh_Rebuilt.pdf)
-
-To re-compile the report from raw results and high-resolution figures:
-```bash
-python reports/build_fresh_report.py
-```
+- **Report Path:** [`reports/ML_Assignment_Report.pdf`](reports/ML_Assignment.pdf)
