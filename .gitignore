@@ -50,6 +50,7 @@ outputs/**/*.pth
 
 # Large Raw Image Datasets
 data/raw/classification/
+data/interim/classification/*.npz
 
 # Keep empty folder structure with .gitkeep if needed
 !.gitkeep
