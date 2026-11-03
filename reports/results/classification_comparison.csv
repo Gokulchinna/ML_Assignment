@@ -1,5 +1,5 @@
 Classifier,Accuracy,Macro Precision,Weighted Precision,Macro Recall,Weighted Recall,Macro F1-Score,Weighted F1-Score,Macro ROC-AUC,Train Accuracy,Generalization Gap (%),Train Time (s),Pred Time (s)
 Deep CNN (ResNet-18),0.943,0.9411,0.9432,0.9417,0.943,0.9412,0.9429,0.9977,0.9447,0.17,339.43,8.83
 SVM (RBF Kernel),0.727,0.7226,0.7302,0.7157,0.727,0.7181,0.7275,0.9462,1.0,27.3,8836.84,141.77
+KNN (with CV),0.5365,0.5798,0.5858,0.5096,0.5365,0.4827,0.5044,0.8776,1.0,46.35,65.28,1.94
 Decision Tree,0.3289,0.3289,0.3394,0.3165,0.3289,0.3183,0.3297,0.7053,0.5189,19.0,463.08,0.02
-KNN (with CV),0.3657,0.4033,0.4079,0.3421,0.3657,0.2961,0.309,0.68,1.0,63.43,48.14,3.68

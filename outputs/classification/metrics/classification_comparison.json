@@ -31,6 +31,21 @@
       "Pred Time (s)": 141.77
     },
     {
+      "Classifier": "KNN (with CV)",
+      "Accuracy": 0.5365,
+      "Macro Precision": 0.5798,
+      "Weighted Precision": 0.5858,
+      "Macro Recall": 0.5096,
+      "Weighted Recall": 0.5365,
+      "Macro F1-Score": 0.4827,
+      "Weighted F1-Score": 0.5044,
+      "Macro ROC-AUC": 0.8776,
+      "Train Accuracy": 1.0,
+      "Generalization Gap (%)": 46.35,
+      "Train Time (s)": 65.28,
+      "Pred Time (s)": 1.94
+    },
+    {
       "Classifier": "Decision Tree",
       "Accuracy": 0.3289,
       "Macro Precision": 0.3289,
@@ -44,21 +59,6 @@
       "Generalization Gap (%)": 19.0,
       "Train Time (s)": 463.08,
       "Pred Time (s)": 0.02
-    },
-    {
-      "Classifier": "KNN (with CV)",
-      "Accuracy": 0.3657,
-      "Macro Precision": 0.4033,
-      "Weighted Precision": 0.4079,
-      "Macro Recall": 0.3421,
-      "Weighted Recall": 0.3657,
-      "Macro F1-Score": 0.2961,
-      "Weighted F1-Score": 0.309,
-      "Macro ROC-AUC": 0.68,
-      "Train Accuracy": 1.0,
-      "Generalization Gap (%)": 63.43,
-      "Train Time (s)": 48.14,
-      "Pred Time (s)": 3.68
     }
   ],
   "best_classifier_by_roc_auc": "Deep CNN (ResNet-18)"

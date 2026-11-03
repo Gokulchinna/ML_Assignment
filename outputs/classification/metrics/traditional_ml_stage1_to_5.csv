@@ -1,4 +1,4 @@
 Model,Best Params,CV Accuracy,Train Accuracy,Test Accuracy,Gen Gap (%),Train Time (s),Pred Time (s)
-KNN (with CV),"K=3, weights='distance'",0.3216,1.0,0.3657,63.43,48.14,3.68
+KNN (with CV),"K=15, weights='distance', metric='cosine'",0.5228,1.0,0.5365,46.35,65.28,1.94
 Decision Tree,"depth=10, crit='gini'",0.2922,0.5189,0.3289,19.0,463.08,0.02
 SVM (RBF Kernel),"C=10.0, gamma='scale'",0.658,1.0,0.727,27.3,8836.84,141.77

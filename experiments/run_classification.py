@@ -114,11 +114,14 @@ def run_full_classification_pipeline(max_stage: int = 7):
         y_train=y_train,
         X_test=X_test,
         y_test=y_test,
-        k_grid=knn_cfg.get("n_neighbors_grid", [3, 5, 7, 9, 11, 15]),
+        k_grid=knn_cfg.get("n_neighbors_grid", [1, 3, 5, 7, 9, 11, 15, 21]),
         weights_grid=knn_cfg.get("weights", ["uniform", "distance"]),
+        metric_grid=knn_cfg.get("metric_grid", ["euclidean", "cosine"]),
         cv_folds=knn_cfg.get("cv_folds", 5),
         tuning_subsample=5000,
-        random_state=seed
+        random_state=seed,
+        output_dir=metric_dir,
+        reports_results_dir=reports_res_dir
     )
     results["knn"] = knn_res
     
@@ -182,7 +185,7 @@ def run_full_classification_pipeline(max_stage: int = 7):
         summary_rows = [
             {
                 "Model": "KNN (with CV)",
-                "Best Params": f"K={knn_res['best_k']}, weights='{knn_res['best_weights']}'",
+                "Best Params": f"K={knn_res['best_k']}, weights='{knn_res['best_weights']}', metric='{knn_res.get('best_metric', 'cosine')}'",
                 "CV Accuracy": round(knn_res["best_cv_score"], 4),
                 "Train Accuracy": round(knn_res["train_accuracy"], 4),
                 "Test Accuracy": round(knn_res["test_accuracy"], 4),

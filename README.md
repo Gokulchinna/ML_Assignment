@@ -1,19 +1,19 @@
-# IIIT Sri City — Machine Learning Assignment (M2026)
+# Machine Learning Assignment
 
-**Course:** Machine Learning (M2026)  
+**Course:** Machine Learning  
 **Submission Deliverable:** [`reports/ML_Assignment_Report.pdf`](reports/ML_Assignment_Report.pdf)  
 
 ---
 
 ## 1. Assignment Overview & Scope
 
-This repository contains the complete, rigorous implementation of the IIIT Sri City Machine Learning Assignment across all three core modules, including the Deep Learning bonus model:
+This repository contains the complete, rigorous implementation of all three core modules, including the Deep Learning model:
 
 1. **Part 1: Multiclass Classification**
    - **Dataset:** EuroSAT RGB Land Cover Dataset (27,000 Sentinel-2 satellite images, $64 \times 64 \times 3$, 10 land cover classes).
    - **Protocol:** Strict stratified 80/20 train/test partition ($21{,}600$ train, $5{,}400$ unseen test images) with zero data leakage. Spatial features represented using $1{,}764$-D Histogram of Oriented Gradients (HOG).
    - **Algorithms Evaluated:**
-     1. *$K$-Nearest Neighbours (KNN):* 5-Fold Stratified Cross-Validation on $K \in \{1, 3, 5, 7, 9, 11\}$ with uniform vs. distance weighting.
+     1. *$K$-Nearest Neighbours (KNN):* 5-Fold Stratified Cross-Validation across metric $\in \{\text{'euclidean'}, \text{'cosine'}\}$, $K \in \{1, 3, 5, 7, 9, 11, 15, 21\}$, and weighting $\in \{\text{'uniform'}, \text{'distance'}\}$. Cosine distance overcomes high-dimensional Euclidean metric concentration on HOG vectors, selecting optimal $K=15$ with distance weighting.
      2. *Decision Tree:* 5-Fold Stratified Cross-Validation across Gini vs. Entropy, tree depths $\in \{5, 10, 15, 20\}$, and leaf split controls.
      3. *Support Vector Machine (SVM):* Non-linear RBF kernel with 3-Fold Stratified Cross-Validation on $C \in \{0.1, 1.0, 10.0\}$ and $\gamma \in \{\text{'scale'}, \text{'auto'}, 0.01\}$, fitted on the full training set with calibrated decision probabilities.
      4. *Deep Convolutional Neural Network (ResNet-18, +5 Marks Bonus):* Custom-adapted for $64 \times 64$ images (stride-1 $3 \times 3$ conv, identity pooling, 4 residual stages, $11.17\text{M}$ parameters) trained with AdamW and cosine annealing on NVIDIA RTX 3060 GPU hardware acceleration.
@@ -96,8 +96,7 @@ ML_Assignment/
 └── reports/
     ├── figures/                               # High-resolution figures embedded in the academic report
     ├── results/                               # Exported CSV metric tables matching experimental runs
-    ├── build_fresh_report.py                  # Script to compile the PDF report
-    └── ML_Assignment_Report.pdf # Final academic submission report (15 pages)
+    └── ML_Assignment_Report.pdf               # Final academic submission report (15 pages)
 ```
 
 ---
@@ -169,10 +168,10 @@ python experiments/run_clustering.py
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | **Deep CNN (ResNet-18)** | **94.30%** | **0.9411** | **0.9417** | **0.9412** | **0.9977** | **0.17%** | 339.4 s (GPU) |
 | **SVM (RBF Kernel)** | 72.70% | 0.7226 | 0.7157 | 0.7181 | 0.9462 | 27.30% | 8,836.8 s (CPU) |
-| **KNN (with 5-Fold CV)** | 36.57% | 0.4033 | 0.3421 | 0.2961 | 0.6800 | 63.43% | 48.1 s |
+| **KNN (with 5-Fold CV)** | 53.65% | 0.5798 | 0.5096 | 0.4827 | 0.8776 | 46.35% | 65.3 s |
 | **Decision Tree (5-Fold CV)** | 32.89% | 0.3289 | 0.3165 | 0.3183 | 0.7053 | 19.00% | 463.1 s |
 
-> **Key Finding:** ResNet-18 is the **outright best classifier** based on ROC curve analysis (Macro ROC-AUC = **0.9977**). Hierarchical convolutional feature extraction with weight decay eliminates the spatial feature limitations of hand-crafted HOG descriptors, yielding a near-zero generalization gap ($0.17\%$).
+> **Key Finding:** ResNet-18 is the **outright best classifier** based on ROC curve analysis (Macro ROC-AUC = **0.9977**). Hierarchical convolutional feature extraction eliminates spatial feature limitations, achieving a near-zero generalization gap (0.17%). Among traditional ML models, Cosine-distance KNN (53.65% test accuracy, 0.8776 ROC-AUC) effectively addresses Euclidean metric concentration on HOG features, outperforming the axis-aligned Decision Tree (32.89%).
 
 ---
 
