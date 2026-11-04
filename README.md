@@ -96,7 +96,7 @@ ML_Assignment/
 └── reports/
     ├── figures/                               # High-resolution figures embedded in the academic report
     ├── results/                               # Exported CSV metric tables matching experimental runs
-    └── ML_Assignment_Report.pdf               # Final academic submission report (15 pages)
+    └── ML_Assignment_Report.pdf               # Final academic submission report (22 pages)
 ```
 
 ---
@@ -129,6 +129,37 @@ pip install -r requirements.txt
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
 ```
 
+### Dataset Setup & Download
+
+The project uses three benchmark datasets:
+
+1. **EuroSAT RGB (Part 1 - Classification):**
+   - **Download:** EuroSAT RGB archive can be downloaded from Zenodo or DFKI:
+     - Zenodo: `https://zenodo.org/records/7711810/files/EuroSAT_RGB.zip`
+     - DFKI: `https://madm.dfki.de/files/sentinel/EuroSAT.zip`
+   - **Placement:** Extract the archive so that the 10 class subfolders reside in `data/raw/classification/EuroSAT_RGB/`:
+     ```
+     data/raw/classification/EuroSAT_RGB/
+     ├── AnnualCrop/
+     ├── Forest/
+     ├── HerbaceousVegetation/
+     ├── Highway/
+     ├── Industrial/
+     ├── Pasture/
+     ├── PermanentCrop/
+     ├── Residential/
+     ├── River/
+     └── SeaLake/
+     ```
+   - Automated download and extraction can also be invoked via `python src/classification/prepare_data.py`.
+
+2. **Metro Interstate Traffic Volume (Part 2 - Regression):**
+   - Available at `data/raw/regression/Metro_Interstate_Traffic_Volume.csv` (UCI ID 492).
+
+3. **Gas Turbine Telemetry (Part 3 - Clustering & PCA):**
+   - Available at `data/raw/clustering/gt_2011.csv` through `gt_2015.csv` (UCI ID 551).
+
+
 ---
 
 ## 4. Running the Experiments
@@ -157,6 +188,17 @@ python experiments/run_regression.py
 python experiments/run_clustering.py
 ```
 *Executes NumPy-only K-Means across $K=2..6$ with Elbow/Silhouette evaluations and sample covariance eigen-decomposition for PCA dimensionality reduction.*
+
+### 4. Verification & Diagnostics Audit
+```bash
+python run_diagnostics.py
+```
+*Runs numerical diagnostics reproducing all audited statistics:*
+- *EuroSAT classification per-class recall and confusion distributions (KNN, Decision Tree, SVM, ResNet-18).*
+- *Design matrix condition numbers ($\kappa$) across polynomial degrees 1 through 5.*
+- *Degree 5 solver comparison (demonstrating the floating-point normal-equations artifact vs. stable SVD `lstsq`).*
+- *Gas Turbine K-Means silhouette coefficient and PCA 3D projection dimensionality ($36{,}733 \times 3$).*
+
 
 ---
 
@@ -204,5 +246,5 @@ python experiments/run_clustering.py
 
 ## 6. Academic PDF Report
 
-The comprehensive 15-page academic report is compiled and available at:
+The comprehensive 22-page academic report is compiled and available at:
 - **Report Path:** [`reports/ML_Assignment_Report.pdf`](reports/ML_Assignment_Report.pdf)
